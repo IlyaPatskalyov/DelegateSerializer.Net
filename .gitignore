@@ -1,0 +1,28 @@
+# Lines that start with '#' are comments.
+# For a project mostly in C, the following would be a good set of
+# exclude patterns (uncomment them if you want to use them):
+# *.[oa]
+# *~
+_ReSharper*
+bin/
+obj/
+*.suo
+*.sln.cache
+*.swp
+*.user
+*.pidb
+.idea/
+settings/*
+Backup*
+UpgradeLog*
+_UpgradeReport*
+*.sln.cache
+.*.swp
+.nuget/NuGet.exe
+!*.ReSharper.user
+*.DotSettings.user
+logs/
+packages/
+.deploy
+.vs/
+tmp
