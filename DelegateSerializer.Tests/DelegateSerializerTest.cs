@@ -54,7 +54,6 @@ namespace DelegateSerializer.Tests
             Func<IEnumerable<int>, IEnumerable<int>> func = s => s.Where(t => t % 2 + 1 == 1).OrderBy(t => t);
             var serialized = delegateSerializer.Serialize(func.Method);
 
-            Console.WriteLine(JsonConvert.SerializeObject(serialized, Formatting.Indented));
             var deFunc = delegateSerializer.DeserializeForDebug<Func<IEnumerable<int>, IEnumerable<int>>>(serialized);
             deFunc(new[] {1, 6, 2, 4, 3, 5});
         }
@@ -161,9 +160,9 @@ namespace DelegateSerializer.Tests
             Func<Guid[], object[]> func = s => s.Select(t => new {Id = t, Length = t.ToString().Length}).ToArray();
 
             var serialized = delegateSerializer.Serialize(func.Method);
-            var deFunc =
-                (Func<Guid[], object[]>) delegateSerializer
-                    .Deserialize<Func<IEnumerable<Guid>, IEnumerable<object>>>(serialized);
+            Console.WriteLine(JsonConvert.SerializeObject(serialized, Formatting.Indented));
+
+            var deFunc = delegateSerializer.DeserializeForDebug<Func<Guid[], object[]>>(serialized);
             deFunc(data);
         }
     }

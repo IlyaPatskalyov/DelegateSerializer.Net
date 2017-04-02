@@ -1,8 +1,10 @@
-﻿using System.Reflection;
+﻿using System;
+using System.Reflection;
 using System.Runtime.Serialization;
 
 namespace DelegateSerializer.Data
 {
+    [Serializable]
     [DataContract]
     public class ExceptionHandlingClauseData
     {

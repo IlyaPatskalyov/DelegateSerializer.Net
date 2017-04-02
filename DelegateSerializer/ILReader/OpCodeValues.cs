@@ -1,6 +1,6 @@
 ﻿namespace DelegateSerializer.ILReader
 {
-    internal enum OpCodeValues
+    internal enum OpCodeValues : uint
     {
         Nop = 0,
         Break = 1,
