@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Reflection;
 using System.Reflection.Emit;
+using System.Text;
 
 namespace DelegateSerializer.SDILReader
 {
@@ -32,43 +33,42 @@ namespace DelegateSerializer.SDILReader
 
         public string GetCode()
         {
-            string str = string.Concat(new object[4]
-                                       {
-                                           "",
-                                           GetExpandedOffset(offset),
-                                           " : ",
-                                           code
-                                       });
+            var sb = new StringBuilder();
+            sb.AppendFormat("{0} : {1}", offset.ToString("x").PadLeft(4, '0'), code);
             if (operand != null)
             {
                 switch (code.OperandType)
                 {
                     case OperandType.InlineBrTarget:
                     case OperandType.ShortInlineBrTarget:
-                        str = str + " " + GetExpandedOffset((int) operand);
+                        sb.Append(" ");
+                        sb.Append(((int) operand).ToString().PadLeft(4, '0'));
                         break;
                     case OperandType.InlineField:
                         var fieldInfo = (FieldInfo) operand;
-                        str = str + " " + Globals.ProcessSpecialTypes(fieldInfo.FieldType.ToString()) + " " +
-                              Globals.ProcessSpecialTypes(fieldInfo.ReflectedType.ToString()) + "::" + fieldInfo.Name;
+                        sb.Append(" ");
+                        sb.AppendFormat("{0} {1}::{2}", fieldInfo.FieldType, fieldInfo.ReflectedType, fieldInfo.Name);
+                        break;
+                    case OperandType.InlineType:
+                        sb.Append(" ");
+                        sb.Append(operand);
                         break;
                     case OperandType.InlineI:
                     case OperandType.InlineI8:
                     case OperandType.InlineR:
+                    case OperandType.ShortInlineVar:
                     case OperandType.ShortInlineI:
                     case OperandType.ShortInlineR:
-                        str = str + operand;
+                        sb.Append(operand);
                         break;
                     case OperandType.InlineMethod:
                         try
                         {
                             var methodInfo = (MethodInfo) operand;
-                            str = str + " ";
+                            sb.Append(" ");
                             if (!methodInfo.IsStatic)
-                                str = str + "instance ";
-                            str = str + Globals.ProcessSpecialTypes(methodInfo.ReturnType.ToString()) + " " +
-                                  Globals.ProcessSpecialTypes(methodInfo.ReflectedType.ToString()) + "::" +
-                                  methodInfo.Name + "()";
+                                sb.Append("instance ");
+                            sb.AppendFormat("{0} {1}::{2}", methodInfo.ReturnType, methodInfo.ReflectedType, methodInfo.Name);
                             break;
                         }
                         catch
@@ -76,12 +76,10 @@ namespace DelegateSerializer.SDILReader
                             try
                             {
                                 var constructorInfo = (ConstructorInfo) operand;
-                                str = str + " ";
+                                sb.Append(" ");
                                 if (!constructorInfo.IsStatic)
-                                    str = str + "instance ";
-                                str = str + "void " +
-                                      Globals.ProcessSpecialTypes(constructorInfo.ReflectedType.ToString()) + "::" +
-                                      constructorInfo.Name + "()";
+                                    sb.Append("instance ");
+                                sb.AppendFormat("void {0}::{1}", constructorInfo.ReflectedType, constructorInfo.Name);
                                 break;
                             }
                             catch
@@ -90,35 +88,21 @@ namespace DelegateSerializer.SDILReader
                             }
                         }
                     case OperandType.InlineString:
-                        str = operand.ToString() != "\r\n" ? str + " \"" + operand + "\"" : str + " \"\\r\\n\"";
+                        sb.AppendFormat(" \"{0}\"", operand);
                         break;
                     case OperandType.InlineTok:
-                        str = !(operand is Type) ? str + "not supported" : str + ((Type) operand).FullName;
-                        break;
-                    case OperandType.InlineType:
-                        str = str + " " + Globals.ProcessSpecialTypes(operand.ToString());
-                        break;
-                    case OperandType.ShortInlineVar:
-                        str = str + operand;
+                        if (!(operand is Type))
+                            sb.Append("not supported");
+                        else
+                            sb.Append(((Type) operand).FullName);
                         break;
                     default:
-                        str = str + "not supported";
+                        sb.Append("not supported");
                         break;
                 }
             }
-            return str;
+            return sb.ToString();
         }
 
-        private string GetExpandedOffset(long offset)
-        {
-            string str = offset.ToString();
-            int num = 0;
-            while (str.Length < 4)
-            {
-                str = "0" + str;
-                ++num;
-            }
-            return str;
-        }
     }
 }

@@ -40,6 +40,11 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="DataBuilders\ConstructorInfoData.cs" />
+    <Compile Include="DataBuilders\ExceptionHandlingClauseDataBuilder.cs" />
+    <Compile Include="DataBuilders\LocalVariableInfoDataBuilder.cs" />
+    <Compile Include="DataBuilders\MethodInfoDataBuilder.cs" />
+    <Compile Include="DataBuilders\TypeInfoDataBuilder.cs" />
     <Compile Include="Data\ConstructorInfoData.cs" />
     <Compile Include="Data\ExceptionHandlingClauseData.cs" />
     <Compile Include="Data\ILInstructionData.cs" />
@@ -47,10 +52,12 @@
     <Compile Include="Data\DelegateData.cs" />
     <Compile Include="Data\MethodInfoData.cs" />
     <Compile Include="Data\TypeInfoData.cs" />
+    <Compile Include="Helpers\BinaryHelpers.cs" />
+    <Compile Include="Helpers\OpCodeHelpers.cs" />
     <Compile Include="IDelegateSerializer.cs" />
     <Compile Include="DelegateDeserializer.cs" />
     <Compile Include="DelegateSerializer.cs" />
-    <Compile Include="SDILReader\Globals.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SDILReader\ILInstruction.cs" />
     <Compile Include="SDILReader\MethodBodyReader.cs" />
     <Compile Include="SDILReader\OpCodeValues.cs" />

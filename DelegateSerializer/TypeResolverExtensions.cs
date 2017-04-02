@@ -5,7 +5,7 @@ using DelegateSerializer.Data;
 
 namespace DelegateSerializer
 {
-    public static class TypeResolverExtensions
+    internal static class TypeResolverExtensions
     {
         public static MethodInfo GetMethod(this TypeResolver typeResolver, MethodInfoData methodInfoData)
         {

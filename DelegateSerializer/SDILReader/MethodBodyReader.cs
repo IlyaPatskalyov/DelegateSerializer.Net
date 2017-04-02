@@ -2,222 +2,120 @@
 using System.Collections.Generic;
 using System.Reflection;
 using System.Reflection.Emit;
+using DelegateSerializer.Helpers;
 
 namespace DelegateSerializer.SDILReader
 {
     public class MethodBodyReader
     {
-        private readonly byte[] il;
-        private readonly MethodBase mi;
-        private List<ILInstruction> instructions;
-
-        public MethodBodyReader(MethodBase mi)
+        public static IEnumerable<ILInstruction> Read(MethodBase m)
         {
-            this.mi = mi;
-            if (mi.GetMethodBody() == null)
-                return;
-            il = mi.GetMethodBody().GetILAsByteArray();
-            Type[] genericArguments = null;
-            if (mi.ReflectedType.IsGenericType)
-                genericArguments = mi.ReflectedType.GetGenericArguments();
-            Type[] genericMemberArguments = null;
-            if (mi.IsGenericMethod)
-                genericMemberArguments = mi.GetGenericArguments();
-            ConstructInstructions(mi.Module, genericArguments, genericMemberArguments);
-        }
+            var methodBody = m.GetMethodBody();
+            if (methodBody == null)
+                yield break;
 
-        public IEnumerable<ILInstruction> GetInstructions()
-        {
-            return instructions;
-        }
+            var il = methodBody.GetILAsByteArray();
 
-        private void ConstructInstructions(Module module, Type[] genericArguments, Type[] genericMemberArguments)
-        {
+            var genericArguments = m.ReflectedType.IsGenericType ? m.ReflectedType.GetGenericArguments() : null;
+            var genericMemberArguments = m.IsGenericMethod ? m.GetGenericArguments() : null;
+
             int position = 0;
-            instructions = new List<ILInstruction>();
             while (position < il.Length)
             {
+                var code = il.ReadOpCode(ref position);
                 var instruction = new ILInstruction();
-                OpCode code = OpCodes.Nop;
-                ushort value = il[position++];
-                if (value != 0xfe)
-                {
-                    code = Globals.singleByteOpCodes[value];
-                }
-                else
-                {
-                    value = il[position++];
-                    code = Globals.multiByteOpCodes[value];
-                    value = (ushort) (value | 0xfe00);
-                }
                 instruction.Code = code;
                 instruction.Offset = position - 1;
                 int metadataToken = 0;
                 switch (code.OperandType)
                 {
                     case OperandType.InlineBrTarget:
-                        metadataToken = ReadInt32(il, ref position) + position;
-                        instruction.Operand = metadataToken;
+                        instruction.Operand = il.ReadInt32(ref position) + position;
                         break;
                     case OperandType.InlineField:
-                        metadataToken = ReadInt32(il, ref position);
-                        instruction.Operand = module.ResolveField(metadataToken, genericArguments,
-                                                                  genericMemberArguments);
+                        metadataToken = il.ReadInt32(ref position);
+                        instruction.Operand = m.Module.ResolveField(metadataToken, genericArguments,
+                                                                    genericMemberArguments);
                         break;
                     case OperandType.InlineI:
-                        instruction.Operand = ReadInt32(il, ref position);
+                        instruction.Operand = il.ReadInt32(ref position);
                         break;
                     case OperandType.InlineI8:
-                        instruction.Operand = ReadInt64(il, ref position);
+                        instruction.Operand = il.ReadInt64(ref position);
                         break;
-                    case OperandType.InlineMethod:
-                        metadataToken = ReadInt32(il, ref position);
-                        try
-                        {
-                            instruction.Operand = module.ResolveMethod(metadataToken, genericArguments,
-                                                                       genericMemberArguments);
-                            break;
-                        }
-                        catch
-                        {
-                            instruction.Operand = module.ResolveMember(metadataToken, genericArguments,
-                                                                       genericMemberArguments);
-                            break;
-                        }
                     case OperandType.InlineNone:
                         instruction.Operand = null;
                         break;
                     case OperandType.InlineR:
-                        instruction.Operand = ReadDouble(il, ref position);
+                        instruction.Operand = il.ReadDouble(ref position);
                         break;
                     case OperandType.InlineSig:
-                        metadataToken = ReadInt32(il, ref position);
-                        instruction.Operand = module.ResolveSignature(metadataToken);
+                        metadataToken = il.ReadInt32(ref position);
+                        instruction.Operand = m.Module.ResolveSignature(metadataToken);
                         break;
                     case OperandType.InlineString:
-                        metadataToken = ReadInt32(il, ref position);
-                        instruction.Operand = module.ResolveString(metadataToken);
+                        metadataToken = il.ReadInt32(ref position);
+                        instruction.Operand = m.Module.ResolveString(metadataToken);
                         break;
                     case OperandType.InlineSwitch:
-                        int length = ReadInt32(il, ref position);
+                        var length = il.ReadInt32(ref position);
                         var numArray1 = new int[length];
                         for (int index = 0; index < length; ++index)
-                            numArray1[index] = ReadInt32(il, ref position);
+                            numArray1[index] = il.ReadInt32(ref position);
                         var numArray2 = new int[length];
                         for (int index = 0; index < length; ++index)
                             numArray2[index] = position + numArray1[index];
                         break;
-                    case OperandType.InlineTok:
-                        metadataToken = ReadInt32(il, ref position);
+                    case OperandType.InlineMethod:
+                        metadataToken = il.ReadInt32(ref position);
                         try
                         {
-                            instruction.Operand = module.ResolveType(metadataToken, genericArguments,
-                                                                     genericMemberArguments);
-                            break;
+                            instruction.Operand = m.Module.ResolveMethod(metadataToken, genericArguments,
+                                                                         genericMemberArguments);
                         }
                         catch
                         {
-                            break;
+                            instruction.Operand = m.Module.ResolveMember(metadataToken, genericArguments,
+                                                                         genericMemberArguments);
                         }
+                        break;
+                    case OperandType.InlineTok:
+                        metadataToken = il.ReadInt32(ref position);
+                        try
+                        {
+                            instruction.Operand = m.Module.ResolveType(metadataToken, genericArguments,
+                                                                       genericMemberArguments);
+                        }
+                        catch
+                        {
+                        }
+                        break;
                     case OperandType.InlineType:
-                        metadataToken = ReadInt32(il, ref position);
-                        instruction.Operand = module.ResolveType(metadataToken,
-                                                                 mi.DeclaringType.GetGenericArguments(),
-                                                                 mi.GetGenericArguments());
+                        metadataToken = il.ReadInt32(ref position);
+                        instruction.Operand = m.Module.ResolveType(metadataToken,
+                                                                   m.DeclaringType.GetGenericArguments(),
+                                                                   genericMemberArguments);
                         break;
                     case OperandType.InlineVar:
-                        instruction.Operand = ReadUInt16(il, ref position);
+                        instruction.Operand = il.ReadUInt16(ref position);
                         break;
                     case OperandType.ShortInlineBrTarget:
-                        instruction.Operand = ReadSByte(il, ref position) + position;
+                        instruction.Operand = il.ReadSByte(ref position) + position;
                         break;
                     case OperandType.ShortInlineI:
-                        instruction.Operand = ReadSByte(il, ref position);
+                        instruction.Operand = il.ReadSByte(ref position);
                         break;
                     case OperandType.ShortInlineR:
-                        instruction.Operand = ReadSingle(il, ref position);
+                        instruction.Operand = il.ReadFloat(ref position);
                         break;
                     case OperandType.ShortInlineVar:
-                        instruction.Operand = ReadByte(il, ref position);
+                        instruction.Operand = il.ReadByte(ref position);
                         break;
                     default:
                         throw new Exception("Unknown operand type.");
                 }
-                instructions.Add(instruction);
+                yield return instruction;
             }
-        }
-
-        public object GetRefferencedOperand(Module module, int metadataToken)
-        {
-            foreach (AssemblyName assemblyRef in module.Assembly.GetReferencedAssemblies())
-            {
-                foreach (Module module1 in Assembly.Load(assemblyRef).GetModules())
-                {
-                    try
-                    {
-                        return module1.ResolveType(metadataToken);
-                    }
-                    catch
-                    {
-                    }
-                }
-            }
-            return null;
-        }
-
-        public string GetBodyCode()
-        {
-            string str = "";
-            if (instructions != null)
-            {
-                for (int index = 0; index < instructions.Count; ++index)
-                    str = str + instructions[index].GetCode() + "\n";
-            }
-            return str;
-        }
-
-        private int ReadInt16(byte[] il, ref int position)
-        {
-            return il[position++] | il[position++] << 8;
-        }
-
-        private ushort ReadUInt16(byte[] il, ref int position)
-        {
-            return (ushort) (il[position++] | il[position++] << 8);
-        }
-
-        private int ReadInt32(byte[] il, ref int position)
-        {
-            return il[position++] | il[position++] << 8 | il[position++] << 16 | il[position++] << 24;
-        }
-
-        private ulong ReadInt64(byte[] il, ref int position)
-        {
-            return
-                (ulong)
-                (il[position++] | il[position++] << 8 | il[position++] << 16 | il[position++] << 24 | il[position++] |
-                 il[position++] << 8 | il[position++] << 16 | il[position++] << 24);
-        }
-
-        private double ReadDouble(byte[] il, ref int position)
-        {
-            return il[position++] | il[position++] << 8 | il[position++] << 16 | il[position++] << 24 | il[position++] |
-                   il[position++] << 8 | il[position++] << 16 | il[position++] << 24;
-        }
-
-        private sbyte ReadSByte(byte[] il, ref int position)
-        {
-            return (sbyte) il[position++];
-        }
-
-        private byte ReadByte(byte[] il, ref int position)
-        {
-            return il[position++];
-        }
-
-        private float ReadSingle(byte[] il, ref int position)
-        {
-            return il[position++] | il[position++] << 8 | il[position++] << 16 | il[position++] << 24;
         }
     }
 }
