@@ -1,35 +1,47 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using DelegateSerializer.Data;
-using DelegateSerializer.DataBuilders;
-using DelegateSerializer.SDILReader;
+using DelegateSerializer.DataConverters;
+using DelegateSerializer.Exceptions;
+using DelegateSerializer.ILReader;
 
 namespace DelegateSerializer
 {
-    public partial class DelegateSerializer : IDelegateSerializer
+    public sealed partial class DelegateSerializer : IDelegateSerializer
     {
         private readonly TypeResolver typeResolver;
-        private readonly TypeInfoDataBuilder typeInfoDataBuilder;
-        private readonly MethodInfoDataBuilder methodInfoDataBuilder;
-        private readonly ExceptionHandlingClauseDataBuilder exceptionHandlingClauseDataBuilder;
-        private readonly ConstructorInfoDataBuilder constructorInfoDataBuilder;
-        private readonly LocalVariableInfoDataBuilder localVariableInfoDataBuilder;
+        private readonly TypeInfoDataConverter typeInfoDataConverter;
+        private readonly MethodInfoDataConverter methodInfoDataConverter;
+        private readonly ExceptionHandlingClauseDataConverter exceptionHandlingClauseDataConverter;
+        private readonly ConstructorInfoDataConverter constructorInfoDataConverter;
+        private readonly LocalVariableInfoDataConverter localVariableInfoDataConverter;
 
-        public DelegateSerializer(TypeResolver typeResolver,
-                                  TypeInfoDataBuilder typeInfoDataBuilder,
-                                  MethodInfoDataBuilder methodInfoDataBuilder,
-                                  ExceptionHandlingClauseDataBuilder exceptionHandlingClauseDataBuilder,
-                                  ConstructorInfoDataBuilder constructorInfoDataBuilder,
-                                  LocalVariableInfoDataBuilder localVariableInfoDataBuilder)
+        public static DelegateSerializer Create()
+        {
+            var typeResolver = new TypeResolver();
+            var typeInfoDataBuilder = new TypeInfoDataConverter();
+            return new DelegateSerializer(typeResolver,
+                                          typeInfoDataBuilder,
+                                          new MethodInfoDataConverter(typeInfoDataBuilder),
+                                          new ExceptionHandlingClauseDataConverter(typeInfoDataBuilder, typeResolver),
+                                          new ConstructorInfoDataConverter(typeInfoDataBuilder),
+                                          new LocalVariableInfoDataConverter(typeInfoDataBuilder, typeResolver));
+        }
+
+        internal DelegateSerializer(TypeResolver typeResolver,
+                                    TypeInfoDataConverter typeInfoDataConverter,
+                                    MethodInfoDataConverter methodInfoDataConverter,
+                                    ExceptionHandlingClauseDataConverter exceptionHandlingClauseDataConverter,
+                                    ConstructorInfoDataConverter constructorInfoDataConverter,
+                                    LocalVariableInfoDataConverter localVariableInfoDataConverter)
         {
             this.typeResolver = typeResolver;
-            this.typeInfoDataBuilder = typeInfoDataBuilder;
-            this.methodInfoDataBuilder = methodInfoDataBuilder;
-            this.exceptionHandlingClauseDataBuilder = exceptionHandlingClauseDataBuilder;
-            this.constructorInfoDataBuilder = constructorInfoDataBuilder;
-            this.localVariableInfoDataBuilder = localVariableInfoDataBuilder;
+            this.typeInfoDataConverter = typeInfoDataConverter;
+            this.methodInfoDataConverter = methodInfoDataConverter;
+            this.exceptionHandlingClauseDataConverter = exceptionHandlingClauseDataConverter;
+            this.constructorInfoDataConverter = constructorInfoDataConverter;
+            this.localVariableInfoDataConverter = localVariableInfoDataConverter;
         }
 
         public DelegateData Serialize(MethodInfo methodInfo)
@@ -40,47 +52,47 @@ namespace DelegateSerializer
 
             var fieldsToLocals = new Dictionary<string, int>();
             var result = new DelegateData();
-            result.ReturnType = typeInfoDataBuilder.Build(methodInfo.ReturnType);
+            result.ReturnType = typeInfoDataConverter.Build(methodInfo.ReturnType);
             result.ParametersType = methodInfo.GetParameters()
-                                              .Select(info => typeInfoDataBuilder.Build(info.ParameterType))
+                                              .Select(info => typeInfoDataConverter.Build(info.ParameterType))
                                               .ToArray();
             result.ExceptionHandlingClauses = methodBody.ExceptionHandlingClauses
-                                                        .Select(c => exceptionHandlingClauseDataBuilder.Build(c))
+                                                        .Select(c => exceptionHandlingClauseDataConverter.Build(c))
                                                         .ToArray();
             result.LocalVariables = new List<LocalVariableInfoData>();
             foreach (var localVariable in methodBody.LocalVariables)
-                result.LocalVariables.Add(localVariableInfoDataBuilder.Build(localVariable));
+                result.LocalVariables.Add(localVariableInfoDataConverter.Build(localVariable));
 
             result.Instructions = new List<ILInstructionData>();
-            foreach (var instruction in MethodBodyReader.Read(methodInfo))
+            foreach (var instruction in MethodReader.Read(methodInfo))
             {
+                //Console.WriteLine(instruction);
                 var operand = instruction.Operand;
-                var item = new ILInstructionData
-                           {
-                               Code = (OpCodeValues) (instruction.Code.Value & 0xffff),
-                               Offset = instruction.Offset,
-                           };
+                var code = (OpCodeValues) (instruction.Code.Value & 0xffff);
+
+                var il = new ILInstructionData();
+
                 if (!methodInfo.IsStatic)
                 {
-                    if (item.Code == OpCodeValues.Ldarg_0)
-                        throw new Exception("Method reference to this");
-                    if (item.Code == OpCodeValues.Ldarg_1)
-                        item.Code = OpCodeValues.Ldarg_0;
-                    else if (item.Code == OpCodeValues.Ldarg_2)
-                        item.Code = OpCodeValues.Ldarg_1;
-                    else if (item.Code == OpCodeValues.Ldarg_3)
-                        item.Code = OpCodeValues.Ldarg_2;
-                    else if (item.Code == OpCodeValues.Ldarg_S && (byte) operand == 4)
+                    if (code == OpCodeValues.Ldarg_0)
+                        throw new DelegateSerializationException("Method reference to this");
+                    if (code == OpCodeValues.Ldarg_1)
+                        code = OpCodeValues.Ldarg_0;
+                    else if (code == OpCodeValues.Ldarg_2)
+                        code = OpCodeValues.Ldarg_1;
+                    else if (code == OpCodeValues.Ldarg_3)
+                        code = OpCodeValues.Ldarg_2;
+                    else if (code == OpCodeValues.Ldarg_S && (byte) operand == 4)
                     {
-                        item.Code = OpCodeValues.Ldarg_3;
+                        code = OpCodeValues.Ldarg_3;
                         operand = null;
                     }
-                    else if (item.Code == OpCodeValues.Ldarg_S && (byte) operand > 4)
+                    else if (code == OpCodeValues.Ldarg_S && (byte) operand > 4)
                         operand = (byte) operand - 1;
                 }
-                if (item.Code == OpCodeValues.Ldftn)
+                if (code == OpCodeValues.Ldftn)
                 {
-                    item.OperandDelegateData = Serialize((MethodInfo) instruction.Operand);
+                    il.OperandDelegateData = Serialize((MethodInfo) instruction.Operand);
                     operand = null;
                 }
                 else if (operand is FieldInfo)
@@ -92,49 +104,51 @@ namespace DelegateSerializer
                         int local;
                         if (!fieldsToLocals.TryGetValue(fieldFullName, out local) && field.FieldType.Name != "<>c")
                         {
-                            result.LocalVariables.Add(localVariableInfoDataBuilder.Build(field));
+                            result.LocalVariables.Add(localVariableInfoDataConverter.Build(field));
                             local = result.LocalVariables.Count - 1;
                             fieldsToLocals.Add(fieldFullName, local);
                         }
 
 
-                        if (item.Code == OpCodeValues.Ldsfld)
+                        if (code == OpCodeValues.Ldsfld)
                         {
                             if (field.FieldType.Name == "<>c")
                             {
-                                item.Code = OpCodeValues.Ldnull;
+                                code = OpCodeValues.Ldnull;
                                 operand = null;
                             }
                             else
                             {
-                                item.Code = OpCodeValues.Ldloc;
+                                code = OpCodeValues.Ldloc;
                                 operand = local;
                             }
                         }
-                        else if (item.Code == OpCodeValues.Stsfld)
+                        else if (code == OpCodeValues.Stsfld)
                         {
-                            item.Code = OpCodeValues.Stloc;
+                            code = OpCodeValues.Stloc;
                             operand = local;
                         }
                         else
-                            throw new Exception("Unknown field operation");
+                            throw new DelegateSerializationException("Unknown field operation");
                     }
                     else
-                        throw new Exception(string.Format("Unknown field info {0}", fieldFullName));
+                        throw new DelegateSerializationException(string.Format("Unknown field info {0}", fieldFullName));
                 }
                 else if (operand is ConstructorInfo)
                 {
-                    item.OperandConstructor = constructorInfoDataBuilder.Build((ConstructorInfo) operand);
+                    il.OperandConstructor = constructorInfoDataConverter.Build((ConstructorInfo) operand);
                     operand = null;
                 }
                 else if (operand is MethodInfo)
                 {
-                    item.OperandMethod = methodInfoDataBuilder.Build((MethodInfo) operand);
+                    il.OperandMethod = methodInfoDataConverter.Build((MethodInfo) operand);
                     operand = null;
                 }
 
-                item.Operand = operand;
-                result.Instructions.Add(item);
+                il.Code = (uint) code;
+                il.Offset = instruction.Offset;
+                il.Operand = operand;
+                result.Instructions.Add(il);
             }
             return result;
         }

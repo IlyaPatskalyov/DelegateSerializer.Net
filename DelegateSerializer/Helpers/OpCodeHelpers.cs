@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Reflection.Emit;
-using DelegateSerializer.SDILReader;
+using DelegateSerializer.ILReader;
 
 namespace DelegateSerializer.Helpers
 {
-    public static class OpCodeHelpers
+    internal static class OpCodeHelpers
     {
         private const int MultiBytePrefix = 0xfe00;
         private static readonly OpCode[] multiByteOpCodes;

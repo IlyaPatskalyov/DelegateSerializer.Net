@@ -1,6 +1,6 @@
-﻿namespace DelegateSerializer.SDILReader
+﻿namespace DelegateSerializer.ILReader
 {
-    public enum OpCodeValues
+    internal enum OpCodeValues
     {
         Nop = 0,
         Break = 1,

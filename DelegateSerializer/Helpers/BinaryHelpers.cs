@@ -1,6 +1,6 @@
 ﻿namespace DelegateSerializer.Helpers
 {
-    public static class BinaryHelpers
+    internal static class BinaryHelpers
     {
         public static int ReadInt16(this byte[] il, ref int position)
         {

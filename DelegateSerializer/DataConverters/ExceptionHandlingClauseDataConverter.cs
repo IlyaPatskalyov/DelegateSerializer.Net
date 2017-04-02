@@ -2,18 +2,19 @@
 using System.Reflection;
 using System.Reflection.Emit;
 using DelegateSerializer.Data;
+using DelegateSerializer.Exceptions;
 
-namespace DelegateSerializer.DataBuilders
+namespace DelegateSerializer.DataConverters
 {
-    public class ExceptionHandlingClauseDataBuilder
+    internal class ExceptionHandlingClauseDataConverter
     {
-        private readonly TypeInfoDataBuilder typeInfoDataBuilder;
+        private readonly TypeInfoDataConverter typeInfoDataConverter;
         private readonly TypeResolver typeResolver;
 
-        public ExceptionHandlingClauseDataBuilder(TypeInfoDataBuilder typeInfoDataBuilder,
+        public ExceptionHandlingClauseDataConverter(TypeInfoDataConverter typeInfoDataConverter,
                                                   TypeResolver typeResolver)
         {
-            this.typeInfoDataBuilder = typeInfoDataBuilder;
+            this.typeInfoDataConverter = typeInfoDataConverter;
             this.typeResolver = typeResolver;
         }
 
@@ -24,7 +25,7 @@ namespace DelegateSerializer.DataBuilders
                        Flags = c.Flags,
                        CatchType =
                            c.Flags == ExceptionHandlingClauseOptions.Clause
-                               ? typeInfoDataBuilder.Build(c.CatchType)
+                               ? typeInfoDataConverter.Build(c.CatchType)
                                : null,
                        TryOffset = c.TryOffset,
                        TryLength = c.TryLength,
@@ -51,7 +52,7 @@ namespace DelegateSerializer.DataBuilders
                         il.BeginCatchBlock(typeResolver.GetType(clause.CatchType));
                         break;
                     default:
-                        throw new Exception(string.Format("Unknown clause {0}", clause.Flags));
+                        throw new DelegateDeserializationException(string.Format("Unknown clause {0}", clause.Flags));
                 }
             }
             if (offset == clause.HandlerOffset + clause.HandlerLength)

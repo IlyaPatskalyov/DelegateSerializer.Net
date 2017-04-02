@@ -40,11 +40,11 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="DataBuilders\ConstructorInfoData.cs" />
-    <Compile Include="DataBuilders\ExceptionHandlingClauseDataBuilder.cs" />
-    <Compile Include="DataBuilders\LocalVariableInfoDataBuilder.cs" />
-    <Compile Include="DataBuilders\MethodInfoDataBuilder.cs" />
-    <Compile Include="DataBuilders\TypeInfoDataBuilder.cs" />
+    <Compile Include="DataConverters\ConstructorInfoDataConverter.cs" />
+    <Compile Include="DataConverters\ExceptionHandlingClauseDataConverter.cs" />
+    <Compile Include="DataConverters\LocalVariableInfoDataConverter.cs" />
+    <Compile Include="DataConverters\MethodInfoDataConverter.cs" />
+    <Compile Include="DataConverters\TypeInfoDataConverter.cs" />
     <Compile Include="Data\ConstructorInfoData.cs" />
     <Compile Include="Data\ExceptionHandlingClauseData.cs" />
     <Compile Include="Data\ILInstructionData.cs" />
@@ -52,15 +52,19 @@
     <Compile Include="Data\DelegateData.cs" />
     <Compile Include="Data\MethodInfoData.cs" />
     <Compile Include="Data\TypeInfoData.cs" />
+    <Compile Include="Exceptions\DelegateDeserializationException.cs" />
+    <Compile Include="Exceptions\DelegateSerializationException.cs" />
     <Compile Include="Helpers\BinaryHelpers.cs" />
     <Compile Include="Helpers\OpCodeHelpers.cs" />
     <Compile Include="IDelegateSerializer.cs" />
     <Compile Include="DelegateDeserializer.cs" />
     <Compile Include="DelegateSerializer.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="SDILReader\ILInstruction.cs" />
-    <Compile Include="SDILReader\MethodBodyReader.cs" />
-    <Compile Include="SDILReader\OpCodeValues.cs" />
+    <Compile Include="ILReader\ILInstruction.cs" />
+    <Compile Include="ILReader\MetadataToken.cs" />
+    <Compile Include="ILReader\MethodReader.cs" />
+    <Compile Include="ILReader\OpCodeValues.cs" />
+    <Compile Include="ILReader\TokenType.cs" />
     <Compile Include="TypeResolver.cs" />
     <Compile Include="TypeResolverExtensions.cs" />
   </ItemGroup>

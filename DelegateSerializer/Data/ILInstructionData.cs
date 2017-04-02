@@ -1,13 +1,15 @@
-﻿using System.Runtime.Serialization;
-using DelegateSerializer.SDILReader;
+﻿using System;
+using System.Runtime.Serialization;
+using DelegateSerializer.ILReader;
 
 namespace DelegateSerializer.Data
 {
+    [Serializable]
     [DataContract]
     public class ILInstructionData
     {
         [DataMember]
-        public OpCodeValues Code { get; set; }
+        public uint Code { get; set; }
 
         [DataMember]
         public int Offset { get; set; }

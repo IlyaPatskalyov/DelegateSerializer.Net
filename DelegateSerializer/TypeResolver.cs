@@ -5,7 +5,7 @@ using System.Reflection;
 
 namespace DelegateSerializer
 {
-    public class TypeResolver
+    internal class TypeResolver
     {
         private HashSet<Assembly> assemblies;
 

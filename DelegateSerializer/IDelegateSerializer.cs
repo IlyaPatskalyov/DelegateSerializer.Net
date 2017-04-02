@@ -7,7 +7,6 @@ namespace DelegateSerializer
     public interface IDelegateSerializer
     {
         DelegateData Serialize(MethodInfo methodInfo);
-        Delegate Deserialize<TFunc>(DelegateData m);
-        Delegate Deserialize(DelegateData m, Type methodType);
+        TFunc Deserialize<TFunc>(DelegateData m) where TFunc : class;
     }
 }

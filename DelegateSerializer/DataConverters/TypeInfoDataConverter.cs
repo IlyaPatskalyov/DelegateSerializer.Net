@@ -1,9 +1,9 @@
 ﻿using System;
 using DelegateSerializer.Data;
 
-namespace DelegateSerializer.DataBuilders
+namespace DelegateSerializer.DataConverters
 {
-    public class TypeInfoDataBuilder
+    internal class TypeInfoDataConverter
     {
         public TypeInfoData Build(Type type)
         {

@@ -3,35 +3,38 @@ using System.Reflection;
 using System.Reflection.Emit;
 using System.Text;
 
-namespace DelegateSerializer.SDILReader
+namespace DelegateSerializer.ILReader
 {
-    public class ILInstruction
+    internal class ILInstruction
     {
         private OpCode code;
         private object operand;
         private int offset;
 
+        public ILInstruction(OpCode code, object operand, int offset)
+        {
+            this.code = code;
+            this.operand = operand;
+            this.offset = offset;
+        }
+
         public OpCode Code
         {
             get { return code; }
-            set { code = value; }
         }
 
         public object Operand
         {
             get { return operand; }
-            set { operand = value; }
         }
-
-        public byte[] OperandData { get; set; }
 
         public int Offset
         {
             get { return offset; }
-            set { offset = value; }
         }
 
-        public string GetCode()
+
+        public override string ToString()
         {
             var sb = new StringBuilder();
             sb.AppendFormat("{0} : {1}", offset.ToString("x").PadLeft(4, '0'), code);
@@ -103,6 +106,5 @@ namespace DelegateSerializer.SDILReader
             }
             return sb.ToString();
         }
-
     }
 }

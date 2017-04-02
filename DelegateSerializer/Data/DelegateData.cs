@@ -1,8 +1,10 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Runtime.Serialization;
 
 namespace DelegateSerializer.Data
 {
+    [Serializable]
     [DataContract]
     public class DelegateData
     {
